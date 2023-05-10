@@ -1,10 +1,9 @@
-using System.Drawing;
-
 namespace GitHelper;
 
 public partial class FrmMain : Form
 {
     private static bool _up2date;
+
     public FrmMain()
     {
         InitializeComponent();
@@ -12,6 +11,7 @@ public partial class FrmMain : Form
 
     private void btnRun_Click(object sender, EventArgs e)
     {
+        btnRun.Enabled = false;
         var result = MessageBox.Show("Press Yes for show UpToDate", Text, MessageBoxButtons.YesNo,
             MessageBoxIcon.Information);
 
@@ -19,7 +19,6 @@ public partial class FrmMain : Form
         {
             _up2date = true;
         }
-
 
         backgroundWorker1.RunWorkerAsync();
     }
@@ -36,6 +35,7 @@ public partial class FrmMain : Form
         WriteOutput("========================================", LogsType.System);
 
         backgroundWorker1.CancelAsync();
+        btnRun.Enabled = true;
     }
 
     private void PullThemAll()
@@ -66,7 +66,7 @@ public partial class FrmMain : Form
                     var result = GitPull(path);
                     if (result == null)
                     {
-                        Debug.WriteLine("It's null");
+                        Debug.WriteLine("Can't Pull");
                         continue;
                     }
 
@@ -124,8 +124,13 @@ public partial class FrmMain : Form
                 var subRepoPath = Path.Combine(repo.Info.WorkingDirectory, submodule.Path);
 
                 using var subRepo = new Repository(subRepoPath);
-                var remoteBranch = subRepo.Branches["origin/master"];
-                subRepo.Reset(ResetMode.Hard, remoteBranch.Tip);
+                var allBranch = subRepo.Branches.ToList();
+                if (allBranch is { Count: > 0 })
+                {
+                    var remoteBranch = subRepo.Branches.FirstOrDefault(u => u.IsCurrentRepositoryHead);
+                    if (remoteBranch != null)
+                        subRepo.Reset(ResetMode.Hard, remoteBranch.Tip);
+                }
             }
             var signature = repo.Config.BuildSignature(DateTimeOffset.Now);
             var pullResult = Commands.Pull(repo, signature, new PullOptions());
@@ -139,22 +144,28 @@ public partial class FrmMain : Form
 
     private static List<List<string>> GetPath()
     {
-        return (from t in Program.PathSetting.PathInfo where Directory.Exists(t.Path) select GetDirectory(t.Path, t.Depth, true)).ToList();
+        return (from t in Program.PathSetting.PathInfo
+                where Directory.Exists(t.Path)
+                select GetDirectory(t.Path, t.Depth, true))
+            .ToList();
     }
 
     private static List<string> GetDirectory(string root, int depth, bool except)
     {
-        var folders = new List<string> { root };
+        var folders = new List<string>();
         foreach (var directory in Directory.EnumerateDirectories(root))
         {
-            if (except)
+            if (except) // always true
             {
                 if (IsExcept(directory))
                 {
                     continue;
                 }
             }
-            folders.Add(directory);
+
+            if (IsGit(directory))
+                folders.Add(directory);
+
             if (depth > 0)
             {
                 var result = GetDirectory(directory, depth - 1, except);
@@ -167,9 +178,35 @@ public partial class FrmMain : Form
 
     private static bool IsExcept(string directory)
     {
-        return directory.Contains("#Archived") || directory.Contains("#Remove") || directory.Contains("#My Project") || directory.Contains("#Old") || directory.EndsWith("Logs") || directory.Equals("dnSpy");
+        foreach (var ignore in Program.PathSetting.IgnoreList)
+        {
+            switch (ignore.IgnoreType)
+            {
+                case IgnoreType.Contains:
+                    if (directory.Contains(ignore.Name))
+                        return true;
+                    break;
+
+                case IgnoreType.Equals:
+                    var directoryName = Path.GetFileName(Path.GetDirectoryName(directory));
+                    if (directoryName != null && directoryName.Equals(ignore.Name))
+                        return true;
+                    break;
+
+                case IgnoreType.EndsWith:
+                    if (directory.EndsWith(ignore.Name))
+                        return true;
+                    break;
+            }
+        }
+
+        return false;
     }
 
+    private static bool IsGit(string directory)
+    {
+        return Directory.Exists(directory + "/.git");
+    }
 
     //https://stackoverflow.com/a/4423615
     private static string ToTime(TimeSpan span)
@@ -255,6 +292,7 @@ public partial class FrmMain : Form
             case LogsType.System:
                 TextToLogs(str + Environment.NewLine, Color.Aqua);
                 break;
+
             case LogsType.Error:
 
                 TextToLogs(str + Environment.NewLine, "[Error] ", Color.Red);
@@ -296,8 +334,6 @@ public partial class FrmMain : Form
         WriteOutput($"Log saved successfully. \"{file}\"", LogsType.System);
     }
 
-
-
     public enum LogsType
     {
         Status,
@@ -307,10 +343,7 @@ public partial class FrmMain : Form
         System,
         Empty,
         Error
-
     }
 
-    #endregion
-
-
+    #endregion Logs
 }

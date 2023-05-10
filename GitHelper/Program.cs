@@ -7,13 +7,15 @@ namespace GitHelper
         /// </summary>
         ///
         internal static PathSetting PathSetting = new();
+
         [STAThread]
-        static void Main()
+        private static void Main()
         {
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
             PathSetting = PathSetting.Load();
+            PathSetting.Save();
             Application.Run(new FrmMain());
         }
     }

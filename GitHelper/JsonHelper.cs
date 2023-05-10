@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace GitHelper;
+﻿namespace GitHelper;
 
 public class JsonHelper<T> where T : new()
 {
@@ -17,6 +15,7 @@ public class JsonHelper<T> where T : new()
         if (!File.Exists(fileName))
         {
             Program.PathSetting.PathInfo = SamplePath();
+            Program.PathSetting.IgnoreList = SampleIgnore();
             Program.PathSetting.Save();
         }
 
@@ -44,6 +43,27 @@ public class JsonHelper<T> where T : new()
                 Path = @"D:\Github",
                 Depth = 0
             }
+        };
+    }
+    private static List<IgnoreInfo> SampleIgnore()
+    {
+        return new List<IgnoreInfo>
+        {
+            new()
+            {
+                Name = "#Archived",
+                IgnoreType = IgnoreType.Contains
+            },
+            new()
+            {
+                Name = "#Remove",
+                IgnoreType = IgnoreType.Contains
+            },
+            new()
+            {
+                Name = "Logs",
+                IgnoreType = IgnoreType.Equals
+            },
         };
     }
 }
