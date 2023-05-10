@@ -21,6 +21,7 @@ public partial class FrmMain : Form
         }
 
         backgroundWorker1.RunWorkerAsync();
+        btnRun.Enabled = true;
     }
 
     private void backgroundWorker1_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
@@ -35,7 +36,6 @@ public partial class FrmMain : Form
         WriteOutput("========================================", LogsType.System);
 
         backgroundWorker1.CancelAsync();
-        btnRun.Enabled = true;
     }
 
     private void PullThemAll()
