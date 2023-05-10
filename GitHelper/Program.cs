@@ -15,7 +15,6 @@ namespace GitHelper
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
             PathSetting = PathSetting.Load();
-            PathSetting.Save();
             Application.Run(new FrmMain());
         }
     }
