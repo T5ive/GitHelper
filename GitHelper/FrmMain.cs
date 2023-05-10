@@ -96,7 +96,8 @@ public partial class FrmMain : Form
                         }
                         WriteOutput(path, LogsType.Path);
                         WriteOutput(result.Status.ToString(), LogsType.Status);
-                        WriteOutput(result.Commit.ToString(), LogsType.Commit);
+                        if (result.Commit != null)
+                            WriteOutput(result.Commit.ToString(), LogsType.Commit);
                         WriteOutput("", LogsType.Empty);
                     }
                 }
