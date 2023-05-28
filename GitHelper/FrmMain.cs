@@ -48,9 +48,13 @@ public partial class FrmMain : Form
         var header = false;
         foreach (var paths in listPath)
         {
+            var headerPath = paths[0];
+            if (Directory.Exists(headerPath))
+                headerPath = Path.GetDirectoryName(headerPath);
+
             if (_up2date)
             {
-                WriteOutput("================= " + paths[0] + " =================", LogsType.Directory);
+                WriteOutput("================= " + headerPath + " =================", LogsType.Directory);
                 header = true;
             }
             foreach (var path in paths)
@@ -74,7 +78,7 @@ public partial class FrmMain : Form
                     {
                         if (!header)
                         {
-                            WriteOutput("================= " + paths[0] + " =================", LogsType.Directory);
+                            WriteOutput("================= " + headerPath + " =================", LogsType.Directory);
                             header = true;
                         }
                         WriteOutput(path, LogsType.Path);
@@ -91,7 +95,7 @@ public partial class FrmMain : Form
                     {
                         if (!header)
                         {
-                            WriteOutput("================= " + paths[0] + " =================", LogsType.Directory);
+                            WriteOutput("================= " + headerPath + " =================", LogsType.Directory);
                             header = true;
                         }
                         WriteOutput(path, LogsType.Path);
