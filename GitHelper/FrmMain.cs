@@ -3,6 +3,7 @@ namespace GitHelper;
 public partial class FrmMain : Form
 {
     private static bool _up2date;
+    private static List<string> _returnedPaths = new();
 
     public FrmMain()
     {
@@ -48,9 +49,7 @@ public partial class FrmMain : Form
         var header = false;
         foreach (var paths in listPath)
         {
-            var headerPath = paths[0];
-            if (Directory.Exists(headerPath))
-                headerPath = Path.GetDirectoryName(headerPath);
+            var headerPath = GetHeader(paths[0]);
 
             if (_up2date)
             {
@@ -211,6 +210,19 @@ public partial class FrmMain : Form
     private static bool IsGit(string directory)
     {
         return Directory.Exists(directory + "/.git");
+    }
+
+    private static string? GetHeader(string directory)
+    {
+        foreach (var path in Program.PathSetting.PathInfo)
+        {
+            if (directory.Contains(path.Path) && !_returnedPaths.Contains(path.Path))
+            {
+                _returnedPaths.Add(path.Path);
+                return path.Path;
+            }
+        }
+        return null;
     }
 
     //https://stackoverflow.com/a/4423615
