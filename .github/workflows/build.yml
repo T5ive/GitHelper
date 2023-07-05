@@ -15,8 +15,8 @@ jobs:
           - platform: Net7
             package-name: Net7
             build-dir: net7.0-windows
-            proj-name: GitHelper 
-            solution-name: GitHelper .sln
+            proj-name: GitHelper
+            solution-name: GitHelper.sln
             config: Release
             dotnet: 7.0.x
 
