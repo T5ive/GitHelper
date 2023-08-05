@@ -73,22 +73,27 @@ public partial class FrmMain : Form
                         continue;
                     }
 
-                    if (result.Status == MergeStatus.FastForward)
+                    var remote = result.Repository.Network.Remotes.FirstOrDefault();
+
+                    if (result.MergeResult.Status == MergeStatus.FastForward)
                     {
                         if (!header)
                         {
                             WriteOutput("================= " + headerPath + " =================", LogsType.Directory);
                             header = true;
                         }
+
                         WriteOutput(path, LogsType.Path);
-                        WriteOutput(result.Status.ToString(), LogsType.Status);
-                        WriteOutput(result.Commit.ToString(), LogsType.Commit);
+                        if (remote != null)
+                            WriteOutput(remote.Url, LogsType.Url);
+                        WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
+                        WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
                         WriteOutput("", LogsType.Empty);
                     }
-                    else if (result.Status == MergeStatus.UpToDate && !_up2date)
+                    else if (result.MergeResult.Status == MergeStatus.UpToDate && !_up2date)
                     {
                         Debug.WriteLine(path);
-                        Debug.WriteLine(result.Status);
+                        Debug.WriteLine(result.MergeResult.Status);
                     }
                     else
                     {
@@ -98,9 +103,11 @@ public partial class FrmMain : Form
                             header = true;
                         }
                         WriteOutput(path, LogsType.Path);
-                        WriteOutput(result.Status.ToString(), LogsType.Status);
-                        if (result.Commit != null)
-                            WriteOutput(result.Commit.ToString(), LogsType.Commit);
+                        if (remote != null)
+                            WriteOutput(remote.Url, LogsType.Url);
+                        WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
+                        if (result.MergeResult.Commit != null)
+                            WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
                         WriteOutput("", LogsType.Empty);
                     }
                 }
@@ -118,11 +125,11 @@ public partial class FrmMain : Form
         SaveLogs();
     }
 
-    private static MergeResult? GitPull(string path)
+    private static Result? GitPull(string path)
     {
         try
         {
-            using var repo = new Repository(path);
+            var repo = new Repository(path);
             foreach (var submodule in repo.Submodules)
             {
                 var subRepoPath = Path.Combine(repo.Info.WorkingDirectory, submodule.Path);
@@ -138,7 +145,7 @@ public partial class FrmMain : Form
             }
             var signature = repo.Config.BuildSignature(DateTimeOffset.Now);
             var pullResult = Commands.Pull(repo, signature, new PullOptions());
-            return pullResult;
+            return new Result(pullResult, repo);
         }
         catch
         {
@@ -294,6 +301,10 @@ public partial class FrmMain : Form
                 TextToLogs(str + Environment.NewLine, "[Path] ", Color.DodgerBlue);
                 break;
 
+            case LogsType.Url:
+                TextToLogs(str + Environment.NewLine, "[Url] ", Color.DodgerBlue);
+                break;
+
             case LogsType.Directory:
                 TextToLogs(str + Environment.NewLine, Color.Orange);
                 break;
@@ -356,6 +367,7 @@ public partial class FrmMain : Form
         Status,
         Commit,
         Path,
+        Url,
         Directory,
         System,
         Empty,
