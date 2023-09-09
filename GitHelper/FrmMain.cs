@@ -39,6 +39,29 @@ public partial class FrmMain : Form
         backgroundWorker1.CancelAsync();
     }
 
+    private void txtLogs_LinkClicked(object sender, LinkClickedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(e.LinkText))
+        {
+            var url = e.LinkText;
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+            {
+                url = "http://" + url;
+            }
+
+            try
+            {
+                Process.Start(url);
+            }
+            catch
+            {
+                url = url.Replace("&", "^&");
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+        }
+
+    }
+
     private void PullThemAll()
     {
         var listPath = GetPath();
@@ -74,7 +97,7 @@ public partial class FrmMain : Form
                     }
 
                     var remote = result.Repository.Network.Remotes.FirstOrDefault();
-
+                    var remoteUrl = remote == null ? null : remote.Url.Replace(".git", "");
                     if (result.MergeResult.Status == MergeStatus.FastForward)
                     {
                         if (!header)
@@ -84,8 +107,8 @@ public partial class FrmMain : Form
                         }
 
                         WriteOutput(path, LogsType.Path);
-                        if (remote != null)
-                            WriteOutput(remote.Url, LogsType.Url);
+                        if (remoteUrl != null)
+                            WriteOutput(remoteUrl, LogsType.Url);
                         WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
                         WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
                         WriteOutput("", LogsType.Empty);
@@ -103,8 +126,8 @@ public partial class FrmMain : Form
                             header = true;
                         }
                         WriteOutput(path, LogsType.Path);
-                        if (remote != null)
-                            WriteOutput(remote.Url, LogsType.Url);
+                        if (remoteUrl != null)
+                            WriteOutput(remoteUrl, LogsType.Url);
                         WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
                         if (result.MergeResult.Commit != null)
                             WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);

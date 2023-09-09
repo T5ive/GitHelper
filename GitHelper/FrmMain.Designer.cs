@@ -46,6 +46,7 @@
             txtLogs.Size = new Size(734, 407);
             txtLogs.TabIndex = 0;
             txtLogs.Text = "";
+            txtLogs.LinkClicked += txtLogs_LinkClicked;
             // 
             // btnRun
             // 
