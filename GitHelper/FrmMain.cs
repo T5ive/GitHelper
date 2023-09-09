@@ -4,10 +4,17 @@ public partial class FrmMain : Form
 {
     private static bool _up2date;
     private static List<string> _returnedPaths = new();
+    private static bool _saved;
 
     public FrmMain()
     {
         InitializeComponent();
+    }
+
+    private void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(txtLogs.Text))
+            SaveLogs();
     }
 
     private void btnRun_Click(object sender, EventArgs e)
@@ -59,7 +66,6 @@ public partial class FrmMain : Form
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
             }
         }
-
     }
 
     private void PullThemAll()
@@ -360,6 +366,8 @@ public partial class FrmMain : Form
 
     public void SaveLogs()
     {
+        if (_saved) return;
+
         var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
         if (!Directory.Exists(path))
         {
@@ -383,6 +391,7 @@ public partial class FrmMain : Form
         }));
 
         WriteOutput($"Log saved successfully. \"{file}\"", LogsType.System);
+        _saved = true;
     }
 
     public enum LogsType
