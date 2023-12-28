@@ -78,6 +78,7 @@ public partial class FrmMain : Form
         var header = false;
         foreach (var paths in listPath)
         {
+            if (paths is { Count: <= 0 }) continue;
             var headerPath = GetHeader(paths[0]);
 
             if (_up2date)
@@ -248,8 +249,9 @@ public partial class FrmMain : Form
         return Directory.Exists(directory + "/.git");
     }
 
-    private static string? GetHeader(string directory)
+    private static string? GetHeader(string? directory)
     {
+        if (string.IsNullOrWhiteSpace(directory)) return null;
         foreach (var path in Program.PathSetting.PathInfo)
         {
             if (directory.Contains(path.Path) && !_returnedPaths.Contains(path.Path))
