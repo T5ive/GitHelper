@@ -6,6 +6,9 @@ public partial class FrmMain : Form
     private static List<string> _returnedPaths = new();
     private static bool _saved;
 
+    //[safe]
+    //directory = *
+
     public FrmMain()
     {
         InitializeComponent();
