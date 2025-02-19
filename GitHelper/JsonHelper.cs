@@ -36,19 +36,16 @@ public class JsonHelper<T> where T : new()
 
     private static List<PathInfo> SamplePath()
     {
-        return new List<PathInfo>
-        {
-            new()
-            {
-                Path = @"D:\Github",
-                Depth = 0
-            }
-        };
+        return
+        [
+            new(@"D:\Github",0)
+        ];
     }
+
     private static List<IgnoreInfo> SampleIgnore()
     {
-        return new List<IgnoreInfo>
-        {
+        return
+        [
             new()
             {
                 Name = "#Archived",
@@ -64,6 +61,6 @@ public class JsonHelper<T> where T : new()
                 Name = "Logs",
                 IgnoreType = IgnoreType.Equals
             },
-        };
+        ];
     }
 }

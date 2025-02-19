@@ -2,7 +2,7 @@
 
 public class PathSetting : JsonHelper<PathSetting>
 {
-    public List<PathInfo> PathInfo = new();
+    public List<PathInfo> PathInfo = [];
 
-    public List<IgnoreInfo> IgnoreList = new();
+    public List<IgnoreInfo> IgnoreList = [];
 }

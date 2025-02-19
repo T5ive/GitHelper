@@ -1,11 +1,12 @@
-namespace GitHelper;
+﻿namespace GitHelper;
 
 public partial class FrmMain : Form
 {
+    private static readonly List<string> ReturnedPaths = [];
     private static bool _up2date;
-    private static List<string> _returnedPaths = new();
     private static bool _saved;
 
+    //C:\User\x\.gitconfig
     //[safe]
     //directory = *
 
@@ -107,7 +108,7 @@ public partial class FrmMain : Form
                     }
 
                     var remote = result.Repository.Network.Remotes.FirstOrDefault();
-                    var remoteUrl = remote == null ? null : remote.Url.Replace(".git", "");
+                    var remoteUrl = remote?.Url.Replace(".git", "");
                     if (result.MergeResult.Status == MergeStatus.FastForward)
                     {
                         if (!header)
@@ -188,10 +189,9 @@ public partial class FrmMain : Form
 
     private static List<List<string>> GetPath()
     {
-        return (from t in Program.PathSetting.PathInfo
+        return [.. (from t in Program.PathSetting.PathInfo
                 where Directory.Exists(t.Path)
-                select GetDirectory(t.Path, t.Depth, true))
-            .ToList();
+                select GetDirectory(t.Path, t.Depth, true))];
     }
 
     private static List<string> GetDirectory(string root, int depth, bool except)
@@ -257,9 +257,9 @@ public partial class FrmMain : Form
         if (string.IsNullOrWhiteSpace(directory)) return null;
         foreach (var path in Program.PathSetting.PathInfo)
         {
-            if (directory.Contains(path.Path) && !_returnedPaths.Contains(path.Path))
+            if (directory.Contains(path.Path) && !ReturnedPaths.Contains(path.Path))
             {
-                _returnedPaths.Add(path.Path);
+                ReturnedPaths.Add(path.Path);
                 return path.Path;
             }
         }
@@ -327,7 +327,7 @@ public partial class FrmMain : Form
         }));
     }
 
-    public void WriteOutput(string str, LogsType type, string errorNum = null)
+    public void WriteOutput(string str, LogsType type)
     {
         switch (type)
         {
