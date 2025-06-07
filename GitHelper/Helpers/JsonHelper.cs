@@ -1,4 +1,4 @@
-﻿namespace GitHelper;
+﻿namespace GitHelper.Helpers;
 
 public class JsonHelper<T> where T : new()
 {
@@ -14,9 +14,13 @@ public class JsonHelper<T> where T : new()
         var t = new T();
         if (!File.Exists(fileName))
         {
-            Program.PathSetting.PathInfo = SamplePath();
-            Program.PathSetting.IgnoreList = SampleIgnore();
-            Program.PathSetting.Save();
+            if (t is PathSetting pathSetting)
+            {
+                pathSetting.PathInfo = SamplePath();
+                pathSetting.IgnoreList = SampleIgnore();
+                pathSetting.Save(fileName);
+                return t;
+            }
         }
 
         if (File.Exists(fileName))
@@ -38,7 +42,7 @@ public class JsonHelper<T> where T : new()
     {
         return
         [
-            new(@"D:\Github",0)
+            new PathInfo(@"D:\Github",0)
         ];
     }
 
@@ -46,17 +50,17 @@ public class JsonHelper<T> where T : new()
     {
         return
         [
-            new()
+            new IgnoreInfo
             {
                 Name = "#Archived",
                 IgnoreType = IgnoreType.Contains
             },
-            new()
+            new IgnoreInfo
             {
                 Name = "#Remove",
                 IgnoreType = IgnoreType.Contains
             },
-            new()
+            new IgnoreInfo
             {
                 Name = "Logs",
                 IgnoreType = IgnoreType.Equals

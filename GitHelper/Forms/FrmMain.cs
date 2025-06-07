@@ -1,14 +1,16 @@
-﻿namespace GitHelper;
+﻿namespace GitHelper.Forms;
 
 public partial class FrmMain : Form
 {
+    #region Variable
+
     private static readonly List<string> ReturnedPaths = [];
     private static bool _up2date;
     private static bool _saved;
 
-    //C:\User\x\.gitconfig
-    //[safe]
-    //directory = *
+    #endregion Variable
+
+    #region Init/Load/Close
 
     public FrmMain()
     {
@@ -21,10 +23,24 @@ public partial class FrmMain : Form
             SaveLogs();
     }
 
+    #endregion Init/Load/Close
+
+    #region Events
+
+    private void SettingsToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        using var settingsForm = new FrmSettings();
+        var result = settingsForm.ShowDialog(this);
+        if (result == DialogResult.OK)
+        {
+            WriteOutput("Settings updated.", LogsType.System);
+        }
+    }
+
     private void btnRun_Click(object sender, EventArgs e)
     {
         btnRun.Enabled = false;
-        var result = MessageBox.Show("Press Yes for show UpToDate", Text, MessageBoxButtons.YesNo,
+        var result = MessageBox.Show(@"Press Yes for show UpToDate", Text, MessageBoxButtons.YesNo,
             MessageBoxIcon.Information);
 
         if (result == DialogResult.Yes)
@@ -35,6 +51,32 @@ public partial class FrmMain : Form
         backgroundWorker1.RunWorkerAsync();
         btnRun.Enabled = true;
     }
+
+    private void txtLogs_LinkClicked(object sender, LinkClickedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(e.LinkText))
+        {
+            var url = e.LinkText;
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+            {
+                url = "https://" + url;
+            }
+
+            try
+            {
+                Process.Start(url);
+            }
+            catch
+            {
+                url = url.Replace("&", "^&");
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+        }
+    }
+
+    #endregion Events
+
+    #region Git Worker
 
     private void backgroundWorker1_DoWork(object sender, System.ComponentModel.DoWorkEventArgs e)
     {
@@ -48,28 +90,6 @@ public partial class FrmMain : Form
         WriteOutput("========================================", LogsType.System);
 
         backgroundWorker1.CancelAsync();
-    }
-
-    private void txtLogs_LinkClicked(object sender, LinkClickedEventArgs e)
-    {
-        if (!string.IsNullOrWhiteSpace(e.LinkText))
-        {
-            var url = e.LinkText;
-            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
-            {
-                url = "http://" + url;
-            }
-
-            try
-            {
-                Process.Start(url);
-            }
-            catch
-            {
-                url = url.Replace("&", "^&");
-                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
-            }
-        }
     }
 
     private void PullThemAll()
@@ -187,11 +207,15 @@ public partial class FrmMain : Form
         }
     }
 
+    #endregion Git Worker
+
+    #region Directory Helper
+
     private static List<List<string>> GetPath()
     {
-        return [.. (from t in Program.PathSetting.PathInfo
-                where Directory.Exists(t.Path)
-                select GetDirectory(t.Path, t.Depth, true))];
+        return [.. from t in Program.PathSetting.PathInfo
+            where Directory.Exists(t.Path)
+            select GetDirectory(t.Path, t.Depth, true)];
     }
 
     private static List<string> GetDirectory(string root, int depth, bool except)
@@ -266,6 +290,10 @@ public partial class FrmMain : Form
         return null;
     }
 
+    #endregion Directory Helper
+
+    #region Utils
+
     //https://stackoverflow.com/a/4423615
     private static string ToTime(TimeSpan span)
     {
@@ -297,6 +325,8 @@ public partial class FrmMain : Form
 
         return formatted;
     }
+
+    #endregion Utils
 
     #region Logs
 

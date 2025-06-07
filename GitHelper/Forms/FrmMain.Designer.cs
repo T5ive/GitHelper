@@ -1,4 +1,4 @@
-﻿namespace GitHelper
+﻿namespace GitHelper.Forms
 {
     partial class FrmMain
     {
@@ -76,6 +76,7 @@
             settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
             settingsToolStripMenuItem.Size = new Size(61, 20);
             settingsToolStripMenuItem.Text = "Settings";
+            settingsToolStripMenuItem.Click += SettingsToolStripMenuItem_Click;
             // 
             // backgroundWorker1
             // 

@@ -1,21 +1,13 @@
-namespace GitHelper
-{
-    internal static class Program
-    {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        ///
-        internal static PathSetting PathSetting = new();
+﻿namespace GitHelper;
 
-        [STAThread]
-        private static void Main()
-        {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            PathSetting = PathSetting.Load();
-            Application.Run(new FrmMain());
-        }
+internal static class Program
+{
+    internal static readonly PathSetting PathSetting = PathSetting.Load();
+
+    [STAThread]
+    private static void Main()
+    {
+        ApplicationConfiguration.Initialize();
+        Application.Run(new FrmMain());
     }
 }
