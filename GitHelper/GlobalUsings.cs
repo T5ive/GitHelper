@@ -1,5 +1,6 @@
 ﻿// Global using directives
 
+global using System.Collections.Concurrent;
 global using System.Diagnostics;
 global using GitHelper.Forms;
 global using GitHelper.Helpers;

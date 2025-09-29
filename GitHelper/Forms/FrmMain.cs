@@ -1,15 +1,14 @@
-﻿using System.Text;
-
-namespace GitHelper.Forms;
+﻿namespace GitHelper.Forms;
 
 public partial class FrmMain : Form
 {
     #region Variable
 
     private static readonly List<string> ReturnedPaths = [];
+    private static readonly ConcurrentQueue<(string, LogsType)> LogQueue = new();
     private static bool _up2date;
     private static bool _saved;
-    private const int MaxDegreeOfParallelism = 5; // สามารถปรับค่าได้ หรือรับจาก UI
+    private const int MaxDegreeOfParallelism = 10;
 
     #endregion Variable
 
@@ -88,10 +87,11 @@ public partial class FrmMain : Form
         PullThemAll();
         sw.Stop();
 
-        WriteOutput("================= Done =================", LogsType.System);
-        WriteOutput(ToTime(sw.Elapsed), LogsType.System);
-        WriteOutput("========================================", LogsType.System);
+        EnqueueLog("================= Done =================", LogsType.System);
+        EnqueueLog(ToTime(sw.Elapsed), LogsType.System);
+        EnqueueLog("========================================", LogsType.System);
 
+        FlushLogs();
         backgroundWorker1.CancelAsync();
     }
 
@@ -123,9 +123,10 @@ public partial class FrmMain : Form
                     min++;
                     current = min;
                 }
+
                 Invoke(new MethodInvoker(delegate
                 {
-                    Text = $@"In process {current}/{max}";
+                    Text = @$"In process {current}/{max}";
                 }));
 
                 var result = GitPull(path);
@@ -139,16 +140,16 @@ public partial class FrmMain : Form
                 var remoteUrl = remote?.Url.Replace(".git", "");
                 if (result.MergeResult.Status == MergeStatus.FastForward)
                 {
-                    if (showHeader || (_up2date && !headerShown.Contains(headerPath)))
+                    if (showHeader || (_up2date && !string.IsNullOrWhiteSpace(headerPath) && !headerShown.Contains(headerPath)))
                     {
-                        WriteOutput($"================= {headerPath} =================", LogsType.Directory);
+                        EnqueueLog($"================= {headerPath} =================", LogsType.Directory);
                     }
-                    WriteOutput(path, LogsType.Path);
+                    EnqueueLog(path, LogsType.Path);
                     if (remoteUrl != null)
-                        WriteOutput(remoteUrl, LogsType.Url);
-                    WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
-                    WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                    WriteOutput("", LogsType.Empty);
+                        EnqueueLog(remoteUrl, LogsType.Url);
+                    EnqueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
+                    EnqueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    EnqueueLog("", LogsType.Empty);
                 }
                 else if (result.MergeResult.Status == MergeStatus.UpToDate && !_up2date)
                 {
@@ -157,27 +158,28 @@ public partial class FrmMain : Form
                 }
                 else
                 {
-                    if (showHeader || (_up2date && !headerShown.Contains(headerPath)))
+                    if (showHeader || (_up2date && !string.IsNullOrWhiteSpace(headerPath) && !headerShown.Contains(headerPath)))
                     {
-                        WriteOutput($"================= {headerPath} =================", LogsType.Directory);
+                        EnqueueLog($"================= {headerPath} =================", LogsType.Directory);
                     }
-                    WriteOutput(path, LogsType.Path);
+                    EnqueueLog(path, LogsType.Path);
                     if (remoteUrl != null)
-                        WriteOutput(remoteUrl, LogsType.Url);
-                    WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
+                        EnqueueLog(remoteUrl, LogsType.Url);
+                    EnqueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
                     if (result.MergeResult.Commit != null)
-                        WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                    WriteOutput("", LogsType.Empty);
+                        EnqueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    EnqueueLog("", LogsType.Empty);
                 }
             }
             catch (Exception ex)
             {
-                WriteOutput($"Error at {path}", LogsType.Error);
-                WriteOutput(ex.Message, LogsType.Error);
-                WriteOutput("", LogsType.Error);
+                EnqueueLog($"Error at {path}", LogsType.Error);
+                EnqueueLog(ex.Message, LogsType.Error);
+                EnqueueLog("", LogsType.Error);
             }
         });
 
+        FlushLogs();
         SaveLogs();
     }
 
@@ -398,6 +400,22 @@ public partial class FrmMain : Form
 
             default:
                 throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
+    }
+
+    private static void EnqueueLog(string str, LogsType type)
+    {
+        LogQueue.Enqueue((str, type));
+    }
+
+    private void FlushLogs()
+    {
+        while (LogQueue.TryDequeue(out var log))
+        {
+            Invoke(new MethodInvoker(delegate
+            {
+                WriteOutput(log.Item1, log.Item2);
+            }));
         }
     }
 
