@@ -41,7 +41,7 @@ public partial class FrmMain : Form
 
     private void btnRun_Click(object sender, EventArgs e)
     {
-        btnRun.Enabled = false;
+        EnableForm(false);
         var result = MessageBox.Show(@"Press Yes for show UpToDate", Text, MessageBoxButtons.YesNo,
             MessageBoxIcon.Information);
 
@@ -51,7 +51,6 @@ public partial class FrmMain : Form
         }
 
         backgroundWorker1.RunWorkerAsync();
-        btnRun.Enabled = true;
     }
 
     private void txtLogs_LinkClicked(object sender, LinkClickedEventArgs e)
@@ -91,8 +90,8 @@ public partial class FrmMain : Form
         EnqueueLog(ToTime(sw.Elapsed), LogsType.System);
         EnqueueLog("========================================", LogsType.System);
 
-        FlushLogs();
         backgroundWorker1.CancelAsync();
+        EnableForm(true);
     }
 
     private void PullThemAll()
@@ -328,6 +327,15 @@ public partial class FrmMain : Form
         if (string.IsNullOrEmpty(formatted)) formatted = "0 seconds";
 
         return formatted;
+    }
+
+    private void EnableForm(bool enable)
+    {
+        Invoke(new MethodInvoker(delegate
+        {
+            btnRun.Enabled = enable;
+            settingsToolStripMenuItem.Enabled = enable;
+        }));
     }
 
     #endregion Utils
