@@ -5,7 +5,7 @@ public partial class FrmMain : Form
     #region Variable
 
     private static readonly List<string> ReturnedPaths = [];
-    private static readonly ConcurrentQueue<(string, LogsType)> LogQueue = new();
+    private static readonly ConcurrentQueue<(string, LogsType)> PendingLogs = new();
     private static bool _up2date;
     private static bool _saved;
 
@@ -40,7 +40,7 @@ public partial class FrmMain : Form
 
     private void btnRun_Click(object sender, EventArgs e)
     {
-        EnableForm(false);
+        SetControlsEnabled(false);
         var result = MessageBox.Show(@"Press Yes for show UpToDate", Text, MessageBoxButtons.YesNo,
             MessageBoxIcon.Information);
 
@@ -82,20 +82,20 @@ public partial class FrmMain : Form
     {
         var sw = new Stopwatch();
         sw.Start();
-        PullThemAll();
+        ProcessRepositories();
         sw.Stop();
 
-        EnqueueLog("================= Done =================", LogsType.System);
-        EnqueueLog(ToTime(sw.Elapsed), LogsType.System);
-        EnqueueLog("========================================", LogsType.System);
+        QueueLog("================= Done =================", LogsType.System);
+        QueueLog(ToTime(sw.Elapsed), LogsType.System);
+        QueueLog("========================================", LogsType.System);
 
         backgroundWorker1.CancelAsync();
-        EnableForm(true);
+        SetControlsEnabled(true);
     }
 
-    private void PullThemAll()
+    private void ProcessRepositories()
     {
-        var listPath = GetPath();
+        var listPath = GetRepositoryPaths();
         var allPaths = listPath.SelectMany(x => x).ToList();
         var min = 0;
         var max = allPaths.Count;
@@ -103,7 +103,7 @@ public partial class FrmMain : Form
 
         Parallel.ForEach(allPaths, new ParallelOptions { MaxDegreeOfParallelism = Properties.Settings.Default.MaxParallel }, path =>
         {
-            var headerPath = GetHeader(path);
+            var headerPath = GetRepositoryHeader(path);
             var showHeader = false;
             lock (headerShown)
             {
@@ -127,7 +127,7 @@ public partial class FrmMain : Form
                     Text = @$"In process {current}/{max}";
                 }));
 
-                var result = GitPull(path);
+                var result = PullRepository(path);
                 if (result == null)
                 {
                     Debug.WriteLine("Can't Pull");
@@ -140,14 +140,14 @@ public partial class FrmMain : Form
                 {
                     if (showHeader || (_up2date && !string.IsNullOrWhiteSpace(headerPath) && !headerShown.Contains(headerPath)))
                     {
-                        EnqueueLog($"================= {headerPath} =================", LogsType.Directory);
+                        QueueLog($"================= {headerPath} =================", LogsType.Directory);
                     }
-                    EnqueueLog(path, LogsType.Path);
+                    QueueLog(path, LogsType.Path);
                     if (remoteUrl != null)
-                        EnqueueLog(remoteUrl, LogsType.Url);
-                    EnqueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
-                    EnqueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                    EnqueueLog("", LogsType.Empty);
+                        QueueLog(remoteUrl, LogsType.Url);
+                    QueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
+                    QueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    QueueLog("", LogsType.Empty);
                 }
                 else if (result.MergeResult.Status == MergeStatus.UpToDate && !_up2date)
                 {
@@ -158,30 +158,30 @@ public partial class FrmMain : Form
                 {
                     if (showHeader || (_up2date && !string.IsNullOrWhiteSpace(headerPath) && !headerShown.Contains(headerPath)))
                     {
-                        EnqueueLog($"================= {headerPath} =================", LogsType.Directory);
+                        QueueLog($"================= {headerPath} =================", LogsType.Directory);
                     }
-                    EnqueueLog(path, LogsType.Path);
+                    QueueLog(path, LogsType.Path);
                     if (remoteUrl != null)
-                        EnqueueLog(remoteUrl, LogsType.Url);
-                    EnqueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
+                        QueueLog(remoteUrl, LogsType.Url);
+                    QueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
                     if (result.MergeResult.Commit != null)
-                        EnqueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                    EnqueueLog("", LogsType.Empty);
+                        QueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    QueueLog("", LogsType.Empty);
                 }
             }
             catch (Exception ex)
             {
-                EnqueueLog($"Error at {path}", LogsType.Error);
-                EnqueueLog(ex.Message, LogsType.Error);
-                EnqueueLog("", LogsType.Error);
+                QueueLog($"Error at {path}", LogsType.Error);
+                QueueLog(ex.Message, LogsType.Error);
+                QueueLog("", LogsType.Error);
             }
         });
 
-        FlushLogs();
+        ProcessLogQueue();
         SaveLogs();
     }
 
-    private static Result? GitPull(string path)
+    private static Result? PullRepository(string path)
     {
         try
         {
@@ -213,32 +213,32 @@ public partial class FrmMain : Form
 
     #region Directory Helper
 
-    private static List<List<string>> GetPath()
+    private static List<List<string>> GetRepositoryPaths()
     {
         return [.. from t in Program.PathSetting.PathInfo
             where Directory.Exists(t.Path)
-            select GetDirectory(t.Path, t.Depth, true)];
+            select GetSubDirectories(t.Path, t.Depth, true)];
     }
 
-    private static List<string> GetDirectory(string root, int depth, bool except)
+    private static List<string> GetSubDirectories(string root, int depth, bool except)
     {
         var folders = new List<string>();
         foreach (var directory in Directory.EnumerateDirectories(root))
         {
-            if (except) // always true
+            if (except)
             {
-                if (IsExcept(directory))
+                if (IsIgnoredDirectory(directory))
                 {
                     continue;
                 }
             }
 
-            if (IsGit(directory))
+            if (IsGitRepository(directory))
                 folders.Add(directory);
 
             if (depth > 0)
             {
-                var result = GetDirectory(directory, depth - 1, except);
+                var result = GetSubDirectories(directory, depth - 1, except);
                 folders.AddRange(result);
             }
         }
@@ -246,7 +246,7 @@ public partial class FrmMain : Form
         return folders;
     }
 
-    private static bool IsExcept(string directory)
+    private static bool IsIgnoredDirectory(string directory)
     {
         foreach (var ignore in Program.PathSetting.IgnoreList)
         {
@@ -273,12 +273,12 @@ public partial class FrmMain : Form
         return false;
     }
 
-    private static bool IsGit(string directory)
+    private static bool IsGitRepository(string directory)
     {
         return Directory.Exists(directory + "/.git");
     }
 
-    private static string? GetHeader(string? directory)
+    private static string? GetRepositoryHeader(string? directory)
     {
         if (string.IsNullOrWhiteSpace(directory)) return null;
         foreach (var path in Program.PathSetting.PathInfo)
@@ -328,7 +328,7 @@ public partial class FrmMain : Form
         return formatted;
     }
 
-    private void EnableForm(bool enable)
+    private void SetControlsEnabled(bool enable)
     {
         Invoke(new MethodInvoker(delegate
         {
@@ -410,14 +410,14 @@ public partial class FrmMain : Form
         }
     }
 
-    private static void EnqueueLog(string str, LogsType type)
+    private static void QueueLog(string str, LogsType type)
     {
-        LogQueue.Enqueue((str, type));
+        PendingLogs.Enqueue((str, type));
     }
 
-    private void FlushLogs()
+    private void ProcessLogQueue()
     {
-        while (LogQueue.TryDequeue(out var log))
+        while (PendingLogs.TryDequeue(out var log))
         {
             Invoke(new MethodInvoker(delegate
             {
