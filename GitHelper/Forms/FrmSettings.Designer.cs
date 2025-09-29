@@ -59,6 +59,10 @@
             panelMainButtons = new Panel();
             btnCancelSettings = new Button();
             btnSaveSettings = new Button();
+            tabPageGeneral = new TabPage();
+            tableLayoutPanel1 = new TableLayoutPanel();
+            label1 = new Label();
+            numMaxParallel = new NumericUpDown();
             tabControlSettings.SuspendLayout();
             tabPagePaths.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvPaths).BeginInit();
@@ -70,12 +74,16 @@
             panelIgnoreButtons.SuspendLayout();
             tlpIgnoreInputs.SuspendLayout();
             panelMainButtons.SuspendLayout();
+            tabPageGeneral.SuspendLayout();
+            tableLayoutPanel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)numMaxParallel).BeginInit();
             SuspendLayout();
             // 
             // tabControlSettings
             // 
             tabControlSettings.Controls.Add(tabPagePaths);
             tabControlSettings.Controls.Add(tabPageIgnoreRules);
+            tabControlSettings.Controls.Add(tabPageGeneral);
             tabControlSettings.Dock = DockStyle.Fill;
             tabControlSettings.Location = new Point(0, 0);
             tabControlSettings.Name = "tabControlSettings";
@@ -403,6 +411,53 @@
             btnSaveSettings.UseVisualStyleBackColor = true;
             btnSaveSettings.Click += BtnSaveSettings_Click;
             // 
+            // tabPageGeneral
+            // 
+            tabPageGeneral.Controls.Add(tableLayoutPanel1);
+            tabPageGeneral.Location = new Point(4, 24);
+            tabPageGeneral.Name = "tabPageGeneral";
+            tabPageGeneral.Padding = new Padding(3);
+            tabPageGeneral.Size = new Size(772, 382);
+            tabPageGeneral.TabIndex = 2;
+            tabPageGeneral.Text = "General";
+            tabPageGeneral.UseVisualStyleBackColor = true;
+            // 
+            // tableLayoutPanel1
+            // 
+            tableLayoutPanel1.AutoSize = true;
+            tableLayoutPanel1.ColumnCount = 2;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tableLayoutPanel1.Controls.Add(label1, 0, 0);
+            tableLayoutPanel1.Controls.Add(numMaxParallel, 1, 0);
+            tableLayoutPanel1.Dock = DockStyle.Top;
+            tableLayoutPanel1.Location = new Point(3, 3);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 1;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+            tableLayoutPanel1.Size = new Size(766, 30);
+            tableLayoutPanel1.TabIndex = 3;
+            // 
+            // label1
+            // 
+            label1.Anchor = AnchorStyles.Left;
+            label1.AutoSize = true;
+            label1.Location = new Point(3, 7);
+            label1.Name = "label1";
+            label1.Size = new Size(146, 15);
+            label1.TabIndex = 0;
+            label1.Text = "MaxDegree Of Parallelism:";
+            // 
+            // numMaxParallel
+            // 
+            numMaxParallel.Dock = DockStyle.Fill;
+            numMaxParallel.Location = new Point(155, 3);
+            numMaxParallel.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numMaxParallel.Name = "numMaxParallel";
+            numMaxParallel.Size = new Size(608, 23);
+            numMaxParallel.TabIndex = 1;
+            numMaxParallel.Value = new decimal(new int[] { 10, 0, 0, 0 });
+            // 
             // FrmSettings
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -427,6 +482,11 @@
             tlpIgnoreInputs.ResumeLayout(false);
             tlpIgnoreInputs.PerformLayout();
             panelMainButtons.ResumeLayout(false);
+            tabPageGeneral.ResumeLayout(false);
+            tabPageGeneral.PerformLayout();
+            tableLayoutPanel1.ResumeLayout(false);
+            tableLayoutPanel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)numMaxParallel).EndInit();
             ResumeLayout(false);
 
         }
@@ -465,5 +525,9 @@
         private System.Windows.Forms.TextBox txtIgnorePatternInput;
         private System.Windows.Forms.Label lblIgnoreType;
         private System.Windows.Forms.ComboBox cmbIgnoreTypeInput;
+        private TabPage tabPageGeneral;
+        private TableLayoutPanel tableLayoutPanel1;
+        private Label label1;
+        private NumericUpDown numMaxParallel;
     }
 }

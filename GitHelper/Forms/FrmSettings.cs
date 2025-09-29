@@ -16,6 +16,7 @@ public partial class FrmSettings : Form
         LoadDgvPaths();
         LoadDgvIgnoreRules();
         UpdateButtonStates();
+        LoadGeneralConfig();
     }
 
     private void LoadDgvPaths()
@@ -42,6 +43,11 @@ public partial class FrmSettings : Form
             var rowIndex = dgvIgnoreRules.Rows.Add(ignoreInfo.Name);
             dgvIgnoreRules.Rows[rowIndex].Cells["colIgnoreType"].Value = ignoreInfo.IgnoreType;
         }
+    }
+
+    private void LoadGeneralConfig()
+    {
+        numMaxParallel.Value = Properties.Settings.Default.MaxParallel;
     }
 
     #endregion Load
@@ -103,6 +109,10 @@ public partial class FrmSettings : Form
         }
 
         Program.PathSetting.Save();
+
+        Properties.Settings.Default.MaxParallel = (int)numMaxParallel.Value;
+        Properties.Settings.Default.Save();
+
         DialogResult = DialogResult.OK;
         Close();
     }

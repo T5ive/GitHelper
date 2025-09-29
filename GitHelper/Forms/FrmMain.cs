@@ -8,7 +8,6 @@ public partial class FrmMain : Form
     private static readonly ConcurrentQueue<(string, LogsType)> LogQueue = new();
     private static bool _up2date;
     private static bool _saved;
-    private const int MaxDegreeOfParallelism = 10;
 
     #endregion Variable
 
@@ -102,7 +101,7 @@ public partial class FrmMain : Form
         var max = allPaths.Count;
         var headerShown = new HashSet<string>();
 
-        Parallel.ForEach(allPaths, new ParallelOptions { MaxDegreeOfParallelism = MaxDegreeOfParallelism }, path =>
+        Parallel.ForEach(allPaths, new ParallelOptions { MaxDegreeOfParallelism = Properties.Settings.Default.MaxParallel }, path =>
         {
             var headerPath = GetHeader(path);
             var showHeader = false;
