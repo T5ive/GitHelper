@@ -1,4 +1,6 @@
-﻿namespace GitHelper.Forms;
+﻿using System.Text;
+
+namespace GitHelper.Forms;
 
 public partial class FrmMain : Form
 {
@@ -7,6 +9,7 @@ public partial class FrmMain : Form
     private static readonly List<string> ReturnedPaths = [];
     private static bool _up2date;
     private static bool _saved;
+    private const int MaxDegreeOfParallelism = 5; // สามารถปรับค่าได้ หรือรับจาก UI
 
     #endregion Variable
 
@@ -95,86 +98,85 @@ public partial class FrmMain : Form
     private void PullThemAll()
     {
         var listPath = GetPath();
+        var allPaths = listPath.SelectMany(x => x).ToList();
         var min = 0;
-        var max = 0;
-        max += listPath.Sum(t => t.Count);
+        var max = allPaths.Count;
+        var headerShown = new HashSet<string>();
 
-        var header = false;
-        foreach (var paths in listPath)
+        Parallel.ForEach(allPaths, new ParallelOptions { MaxDegreeOfParallelism = MaxDegreeOfParallelism }, path =>
         {
-            if (paths is { Count: <= 0 }) continue;
-            var headerPath = GetHeader(paths[0]);
-
-            if (_up2date)
+            var headerPath = GetHeader(path);
+            var showHeader = false;
+            lock (headerShown)
             {
-                WriteOutput("================= " + headerPath + " =================", LogsType.Directory);
-                header = true;
+                if (!string.IsNullOrEmpty(headerPath) && headerShown.Add(headerPath))
+                {
+                    showHeader = true;
+                }
             }
-            foreach (var path in paths)
+
+            try
             {
-                try
+                int current;
+                lock (this)
                 {
                     min++;
-                    Invoke(new MethodInvoker(delegate
-                    {
-                        Text = $"In process {min}/{max}";
-                    }));
-
-                    var result = GitPull(path);
-                    if (result == null)
-                    {
-                        Debug.WriteLine("Can't Pull");
-                        continue;
-                    }
-
-                    var remote = result.Repository.Network.Remotes.FirstOrDefault();
-                    var remoteUrl = remote?.Url.Replace(".git", "");
-                    if (result.MergeResult.Status == MergeStatus.FastForward)
-                    {
-                        if (!header)
-                        {
-                            WriteOutput("================= " + headerPath + " =================", LogsType.Directory);
-                            header = true;
-                        }
-
-                        WriteOutput(path, LogsType.Path);
-                        if (remoteUrl != null)
-                            WriteOutput(remoteUrl, LogsType.Url);
-                        WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
-                        WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                        WriteOutput("", LogsType.Empty);
-                    }
-                    else if (result.MergeResult.Status == MergeStatus.UpToDate && !_up2date)
-                    {
-                        Debug.WriteLine(path);
-                        Debug.WriteLine(result.MergeResult.Status);
-                    }
-                    else
-                    {
-                        if (!header)
-                        {
-                            WriteOutput("================= " + headerPath + " =================", LogsType.Directory);
-                            header = true;
-                        }
-                        WriteOutput(path, LogsType.Path);
-                        if (remoteUrl != null)
-                            WriteOutput(remoteUrl, LogsType.Url);
-                        WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
-                        if (result.MergeResult.Commit != null)
-                            WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                        WriteOutput("", LogsType.Empty);
-                    }
+                    current = min;
                 }
-                catch (Exception ex)
+                Invoke(new MethodInvoker(delegate
                 {
-                    WriteOutput($"Error at {path} - In Process {min}", LogsType.Error);
-                    WriteOutput(ex.Message, LogsType.Error);
-                    WriteOutput("", LogsType.Error);
+                    Text = $@"In process {current}/{max}";
+                }));
+
+                var result = GitPull(path);
+                if (result == null)
+                {
+                    Debug.WriteLine("Can't Pull");
+                    return;
+                }
+
+                var remote = result.Repository.Network.Remotes.FirstOrDefault();
+                var remoteUrl = remote?.Url.Replace(".git", "");
+                if (result.MergeResult.Status == MergeStatus.FastForward)
+                {
+                    if (showHeader || (_up2date && !headerShown.Contains(headerPath)))
+                    {
+                        WriteOutput($"================= {headerPath} =================", LogsType.Directory);
+                    }
+                    WriteOutput(path, LogsType.Path);
+                    if (remoteUrl != null)
+                        WriteOutput(remoteUrl, LogsType.Url);
+                    WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
+                    WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    WriteOutput("", LogsType.Empty);
+                }
+                else if (result.MergeResult.Status == MergeStatus.UpToDate && !_up2date)
+                {
+                    Debug.WriteLine(path);
+                    Debug.WriteLine(result.MergeResult.Status);
+                }
+                else
+                {
+                    if (showHeader || (_up2date && !headerShown.Contains(headerPath)))
+                    {
+                        WriteOutput($"================= {headerPath} =================", LogsType.Directory);
+                    }
+                    WriteOutput(path, LogsType.Path);
+                    if (remoteUrl != null)
+                        WriteOutput(remoteUrl, LogsType.Url);
+                    WriteOutput(result.MergeResult.Status.ToString(), LogsType.Status);
+                    if (result.MergeResult.Commit != null)
+                        WriteOutput(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    WriteOutput("", LogsType.Empty);
                 }
             }
-
-            header = false;
-        }
+            catch (Exception ex)
+            {
+                WriteOutput($"Error at {path}", LogsType.Error);
+                WriteOutput(ex.Message, LogsType.Error);
+                WriteOutput("", LogsType.Error);
+            }
+        });
 
         SaveLogs();
     }
