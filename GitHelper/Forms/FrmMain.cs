@@ -5,9 +5,8 @@ public partial class FrmMain : Form
     #region Variable
 
     private static readonly List<string> ReturnedPaths = [];
-    private static readonly ConcurrentQueue<(string, LogsType)> PendingLogs = new();
+    private FastLogger? _fastLogger;
     private static bool _up2date;
-    private static bool _saved;
 
     #endregion Variable
 
@@ -16,12 +15,21 @@ public partial class FrmMain : Form
     public FrmMain()
     {
         InitializeComponent();
+        InitializeLogging();
     }
 
-    private void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
+    private void InitializeLogging()
     {
-        if (!string.IsNullOrWhiteSpace(txtLogs.Text))
-            SaveLogs();
+        _fastLogger = new FastLogger(txtLogs);
+    }
+
+    private async void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
+    {
+        if (_fastLogger != null)
+        {
+            await _fastLogger.SaveLogsAsync(forceFlush: true);
+            _fastLogger.Dispose();
+        }
     }
 
     #endregion Init/Load/Close
@@ -34,7 +42,7 @@ public partial class FrmMain : Form
         var result = settingsForm.ShowDialog(this);
         if (result == DialogResult.OK)
         {
-            WriteOutput("Settings updated.", LogsType.System);
+            _fastLogger?.LogAsync("Settings updated.", LogsType.System);
         }
     }
 
@@ -85,9 +93,9 @@ public partial class FrmMain : Form
         ProcessRepositories();
         sw.Stop();
 
-        QueueLog("================= Done =================", LogsType.System);
-        QueueLog(ToTime(sw.Elapsed), LogsType.System);
-        QueueLog("========================================", LogsType.System);
+        _fastLogger?.LogAsync("================= Done =================", LogsType.System);
+        _fastLogger?.LogAsync(ToTime(sw.Elapsed), LogsType.System);
+        _fastLogger?.LogAsync("========================================", LogsType.System);
 
         backgroundWorker1.CancelAsync();
         SetControlsEnabled(true);
@@ -101,6 +109,7 @@ public partial class FrmMain : Form
         var max = allPaths.Count;
         var headerShown = new HashSet<string>();
 
+        var logger = _fastLogger; // Capture instance for use in parallel context
         Parallel.ForEach(allPaths, new ParallelOptions { MaxDegreeOfParallelism = Properties.Settings.Default.MaxParallel }, path =>
         {
             var headerPath = GetRepositoryHeader(path);
@@ -140,14 +149,14 @@ public partial class FrmMain : Form
                 {
                     if (showHeader || (_up2date && !string.IsNullOrWhiteSpace(headerPath) && !headerShown.Contains(headerPath)))
                     {
-                        QueueLog($"================= {headerPath} =================", LogsType.Directory);
+                        logger?.LogAsync($"================= {headerPath} =================", LogsType.Directory);
                     }
-                    QueueLog(path, LogsType.Path);
+                    logger?.LogAsync(path, LogsType.Path);
                     if (remoteUrl != null)
-                        QueueLog(remoteUrl, LogsType.Url);
-                    QueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
-                    QueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                    QueueLog("", LogsType.Empty);
+                        logger?.LogAsync(remoteUrl, LogsType.Url);
+                    logger?.LogAsync(result.MergeResult.Status.ToString(), LogsType.Status);
+                    logger?.LogAsync(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    logger?.LogAsync("", LogsType.Empty);
                 }
                 else if (result.MergeResult.Status == MergeStatus.UpToDate && !_up2date)
                 {
@@ -158,27 +167,26 @@ public partial class FrmMain : Form
                 {
                     if (showHeader || (_up2date && !string.IsNullOrWhiteSpace(headerPath) && !headerShown.Contains(headerPath)))
                     {
-                        QueueLog($"================= {headerPath} =================", LogsType.Directory);
+                        logger?.LogAsync($"================= {headerPath} =================", LogsType.Directory);
                     }
-                    QueueLog(path, LogsType.Path);
+                    logger?.LogAsync(path, LogsType.Path);
                     if (remoteUrl != null)
-                        QueueLog(remoteUrl, LogsType.Url);
-                    QueueLog(result.MergeResult.Status.ToString(), LogsType.Status);
+                        logger?.LogAsync(remoteUrl, LogsType.Url);
+                    logger?.LogAsync(result.MergeResult.Status.ToString(), LogsType.Status);
                     if (result.MergeResult.Commit != null)
-                        QueueLog(result.MergeResult.Commit.ToString(), LogsType.Commit);
-                    QueueLog("", LogsType.Empty);
+                        logger?.LogAsync(result.MergeResult.Commit.ToString(), LogsType.Commit);
+                    logger?.LogAsync("", LogsType.Empty);
                 }
             }
             catch (Exception ex)
             {
-                QueueLog($"Error at {path}", LogsType.Error);
-                QueueLog(ex.Message, LogsType.Error);
-                QueueLog("", LogsType.Error);
+                logger?.LogAsync($"Error at {path}", LogsType.Error);
+                logger?.LogAsync(ex.Message, LogsType.Error);
+                logger?.LogAsync("", LogsType.Error);
             }
         });
 
-        ProcessLogQueue();
-        SaveLogs();
+        // Logging is now handled automatically by FastLogger
     }
 
     private static Result? PullRepository(string path)
@@ -340,133 +348,6 @@ public partial class FrmMain : Form
     #endregion Utils
 
     #region Logs
-
-    private static void AppendText(RichTextBox box, string text, string strColor, Color color)
-    {
-        box.SelectionStart = box.TextLength;
-        box.SelectionLength = 0;
-        box.SelectionColor = color;
-        box.AppendText(strColor);
-        box.SelectionColor = box.ForeColor;
-        box.AppendText(text);
-        box.ScrollToCaret();
-    }
-
-    private void TextToLogs(string str, string strColor, Color color)
-    {
-        Invoke(new MethodInvoker(delegate
-        {
-            AppendText(txtLogs, str, strColor, color);
-        }));
-    }
-
-    private void TextToLogs(string strColor, Color color)
-    {
-        Invoke(new MethodInvoker(delegate
-        {
-            AppendText(txtLogs, "", strColor, color);
-        }));
-    }
-
-    public void WriteOutput(string str, LogsType type)
-    {
-        switch (type)
-        {
-            case LogsType.Path:
-                TextToLogs(str + Environment.NewLine, "[Path] ", Color.DodgerBlue);
-                break;
-
-            case LogsType.Url:
-                TextToLogs(str + Environment.NewLine, "[Url] ", Color.DodgerBlue);
-                break;
-
-            case LogsType.Directory:
-                TextToLogs(str + Environment.NewLine, Color.Orange);
-                break;
-
-            case LogsType.Status:
-                TextToLogs(str + Environment.NewLine, "[Status] ", Color.DarkSalmon);
-                break;
-
-            case LogsType.Commit:
-                TextToLogs(str + Environment.NewLine, "[Commit] ", Color.DarkSalmon);
-                break;
-
-            case LogsType.System:
-                TextToLogs(str + Environment.NewLine, Color.Aqua);
-                break;
-
-            case LogsType.Error:
-
-                TextToLogs(str + Environment.NewLine, "[Error] ", Color.Red);
-                break;
-
-            case LogsType.Empty:
-                TextToLogs(str + Environment.NewLine, "", Color.Gold);
-                break;
-
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
-    }
-
-    private static void QueueLog(string str, LogsType type)
-    {
-        PendingLogs.Enqueue((str, type));
-    }
-
-    private void ProcessLogQueue()
-    {
-        while (PendingLogs.TryDequeue(out var log))
-        {
-            Invoke(new MethodInvoker(delegate
-            {
-                WriteOutput(log.Item1, log.Item2);
-            }));
-        }
-    }
-
-    public void SaveLogs()
-    {
-        if (_saved) return;
-
-        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
-        if (!Directory.Exists(path))
-        {
-            Directory.CreateDirectory(path);
-        }
-
-        var date = DateTime.Now.ToString("yyyy-MM-dd");
-        var file = Path.Combine(path, date + ".txt");
-        for (var i = 0; ; i++)
-        {
-            if (File.Exists(file))
-            {
-                file = Path.Combine(path, date + "_" + i + ".txt");
-                continue;
-            }
-            break;
-        }
-        Invoke(new MethodInvoker(delegate
-        {
-            File.WriteAllText(file, txtLogs.Text);
-        }));
-
-        WriteOutput($"Log saved successfully. \"{file}\"", LogsType.System);
-        _saved = true;
-    }
-
-    public enum LogsType
-    {
-        Status,
-        Commit,
-        Path,
-        Url,
-        Directory,
-        System,
-        Empty,
-        Error
-    }
-
+    // LogsType enum moved to GitHelper.Models.LogsType
     #endregion Logs
 }

@@ -34,5 +34,41 @@ namespace GitHelper.Properties {
                 this["MaxParallel"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public int LogUIUpdateInterval {
+            get {
+                return ((int)(this["LogUIUpdateInterval"]));
+            }
+            set {
+                this["LogUIUpdateInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5000")]
+        public int LogFileFlushInterval {
+            get {
+                return ((int)(this["LogFileFlushInterval"]));
+            }
+            set {
+                this["LogFileFlushInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("50")]
+        public int LogBatchSize {
+            get {
+                return ((int)(this["LogBatchSize"]));
+            }
+            set {
+                this["LogBatchSize"] = value;
+            }
+        }
     }
 }

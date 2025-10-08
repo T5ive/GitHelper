@@ -48,6 +48,111 @@ public partial class FrmSettings : Form
     private void LoadGeneralConfig()
     {
         numMaxParallel.Value = Properties.Settings.Default.MaxParallel;
+        
+        // Add logging configuration tab if it doesn't exist
+        if (!tabControlSettings.TabPages.Cast<TabPage>().Any(tp => tp.Name == "tabPageLogging"))
+        {
+            CreateLoggingTab();
+        }
+        
+        LoadLoggingConfig();
+    }
+
+    private TabPage? _tabPageLogging;
+    private NumericUpDown? _numUIUpdateInterval;
+    private NumericUpDown? _numFileFlushInterval;
+    private NumericUpDown? _numBatchSize;
+
+    private void CreateLoggingTab()
+    {
+        _tabPageLogging = new TabPage
+        {
+            Name = "tabPageLogging",
+            Text = "Logging",
+            UseVisualStyleBackColor = true,
+            Padding = new Padding(3)
+        };
+
+        var tableLayoutPanel = new TableLayoutPanel
+        {
+            AutoSize = true,
+            ColumnCount = 2,
+            Dock = DockStyle.Top,
+            RowCount = 3
+        };
+
+        tableLayoutPanel.ColumnStyles.Add(new ColumnStyle());
+        tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        
+        for (int i = 0; i < 3; i++)
+        {
+            tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
+        }
+
+        // UI Update Interval
+        var lblUIUpdate = new Label
+        {
+            Text = "UI Update Interval (ms):",
+            Anchor = AnchorStyles.Left,
+            AutoSize = true
+        };
+        _numUIUpdateInterval = new NumericUpDown
+        {
+            Minimum = 50,
+            Maximum = 5000,
+            Value = Properties.Settings.Default.LogUIUpdateInterval,
+            Dock = DockStyle.Fill
+        };
+
+        // File Flush Interval
+        var lblFileFlush = new Label
+        {
+            Text = "File Flush Interval (ms):",
+            Anchor = AnchorStyles.Left,
+            AutoSize = true
+        };
+        _numFileFlushInterval = new NumericUpDown
+        {
+            Minimum = 1000,
+            Maximum = 60000,
+            Value = Properties.Settings.Default.LogFileFlushInterval,
+            Dock = DockStyle.Fill
+        };
+
+        // Batch Size
+        var lblBatchSize = new Label
+        {
+            Text = "Batch Size:",
+            Anchor = AnchorStyles.Left,
+            AutoSize = true
+        };
+        _numBatchSize = new NumericUpDown
+        {
+            Minimum = 10,
+            Maximum = 500,
+            Value = Properties.Settings.Default.LogBatchSize,
+            Dock = DockStyle.Fill
+        };
+
+        tableLayoutPanel.Controls.Add(lblUIUpdate, 0, 0);
+        tableLayoutPanel.Controls.Add(_numUIUpdateInterval, 1, 0);
+        tableLayoutPanel.Controls.Add(lblFileFlush, 0, 1);
+        tableLayoutPanel.Controls.Add(_numFileFlushInterval, 1, 1);
+        tableLayoutPanel.Controls.Add(lblBatchSize, 0, 2);
+        tableLayoutPanel.Controls.Add(_numBatchSize, 1, 2);
+
+        _tabPageLogging.Controls.Add(tableLayoutPanel);
+        tabControlSettings.TabPages.Add(_tabPageLogging);
+    }
+
+    private void LoadLoggingConfig()
+    {
+        if (_numUIUpdateInterval != null)
+            _numUIUpdateInterval.Value = Properties.Settings.Default.LogUIUpdateInterval;
+        if (_numFileFlushInterval != null)
+            _numFileFlushInterval.Value = Properties.Settings.Default.LogFileFlushInterval;
+        if (_numBatchSize != null)
+            _numBatchSize.Value = Properties.Settings.Default.LogBatchSize;
     }
 
     #endregion Load
@@ -111,6 +216,15 @@ public partial class FrmSettings : Form
         Program.PathSetting.Save();
 
         Properties.Settings.Default.MaxParallel = (int)numMaxParallel.Value;
+        
+        // Save logging settings if they exist
+        if (_numUIUpdateInterval != null)
+            Properties.Settings.Default.LogUIUpdateInterval = (int)_numUIUpdateInterval.Value;
+        if (_numFileFlushInterval != null)
+            Properties.Settings.Default.LogFileFlushInterval = (int)_numFileFlushInterval.Value;
+        if (_numBatchSize != null)
+            Properties.Settings.Default.LogBatchSize = (int)_numBatchSize.Value;
+            
         Properties.Settings.Default.Save();
 
         DialogResult = DialogResult.OK;
@@ -214,7 +328,7 @@ public partial class FrmSettings : Form
     private void BtnAddIgnoreRule_Click(object sender, EventArgs e)
     {
         var pattern = txtIgnorePatternInput.Text.Trim();
-        var type = (IgnoreType)cmbIgnoreTypeInput.SelectedValue;
+        var type = cmbIgnoreTypeInput.SelectedValue is IgnoreType selectedType ? selectedType : IgnoreType.Contains;
 
         if (string.IsNullOrWhiteSpace(pattern))
         {
@@ -236,7 +350,7 @@ public partial class FrmSettings : Form
         {
             var selectedRow = dgvIgnoreRules.SelectedRows[0];
             var pattern = txtIgnorePatternInput.Text.Trim();
-            var type = (IgnoreType)cmbIgnoreTypeInput.SelectedValue;
+            var type = cmbIgnoreTypeInput.SelectedValue is IgnoreType selectedType ? selectedType : IgnoreType.Contains;
 
             if (string.IsNullOrWhiteSpace(pattern))
             {
